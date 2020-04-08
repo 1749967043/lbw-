@@ -1,0 +1,19 @@
+#include <stdio.h>
+int main()
+{
+	int N, n, s, ans, m = 0;
+	printf("请输入序列中元素个数：");
+	scanf("%d", &N); //读取数组长度和序列中的第一个数
+	printf("请输入序列元素：");
+	scanf("%d ", &n);
+	ans = s = n; //把ans初始化为序列中的的第一个数
+	for (int i = 1; i < N; i++) {
+		if (s < m) m = s;
+		scanf("%d", &n);
+		s += n;
+		if (s - m > ans)
+			ans = s - m;
+	}
+	printf("最大连续子序列的值：%d\n", ans);
+	return 0;
+}
