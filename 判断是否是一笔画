@@ -1,0 +1,457 @@
+#include<stdio.h>
+#include<stdlib.h>
+#include<iostream>
+using namespace std;
+struct bian
+{
+	char begin;//边的一个顶点
+	char end;//边的另一个定点
+	bian *next;
+	int sign;//边的访问标志：0未访问过，1访问过
+};//边的结构体
+struct dian
+{
+	int number;
+	char data;//点
+	int du;//点的度
+	dian *next;
+};//点的结构体
+struct node
+{
+	char begin;
+	char end;
+	node *next;
+};//栈的结构体
+void initstack(node *&s)
+{
+	s = NULL;
+}//初始化
+void push(node *&s, char begin, char end)
+{
+	node *p;
+	p = new node;
+	p->begin = begin;
+	p->end = end;
+	p->next = s;
+	s = p;
+}//入栈
+void pop(node *&s, char &begin, char &end)
+{
+	node *p;
+	p = s;
+	begin = s->begin;
+	end = s->end;
+	s = s->next;
+	delete(p);
+}//出栈
+struct tu
+{
+	int yisign;//是否一笔画
+	int dnum;//点的个数
+	int bnum;//边的个数
+	dian *ji12[2];//奇点1,2
+	int  ji;//是否有奇点
+	bian *bfirst;
+	dian *dfirst;
+	tu *next;
+};
+//***********************************深度遍历记录一笔画路径********************************
+void dfs(char *diannumber, int **&a/*一笔画的邻接矩阵*/, node *&s/*倒序存储一笔画边的栈*/,
+	int &n/*栈容量*/, int &a1/*开始点下标*/, int a2/*结束点下标*/,
+	int dnum/*点个数*/, int bnum/*边个数*/,
+	int &back/*退一层函数标志*/, int &allback/*退全部函数标志*/, int &over)
+{
+	int begin = a1, end;
+	char be, en;
+	for (end = 0; end < dnum; end++)
+	{
+		if (a[begin][end] == 1)
+		{
+			a[begin][end] = 0;
+			a[end][begin] = 0;
+			be = diannumber[begin];
+			en = diannumber[end];
+			push(s, be, en);
+			n++;
+			if (end == a2 && n == bnum) { allback = 1; return; }
+			else
+				if (n == bnum && end != a2)
+				{
+					back = 1;
+					a[begin][end] = 1;
+					a[end][begin] = 1;
+					return;
+				}
+				else
+				{
+					dfs(diannumber, a, s, n, end, a2, dnum, bnum, back, allback, over);
+					if (over == 1)
+					{
+						over = 0;
+						a[begin][end] = 1;
+						a[end][begin] = 1;
+						pop(s, be, en);
+						n--;
+					}
+				}
+		}
+		if (allback == 1)return;
+		if (back == 1)
+		{
+			back = 0;
+			pop(s, be, en);
+			n--;
+		}
+	}
+	if (end == dnum)over = 1;
+}
+//*******************************************************************************//
+//****************************给每个连通图创建邻接矩阵****************************
+void  create(tu *t)
+{
+	int over = 0;
+	char x, y;
+	char *diannumber = new char[t->dnum];
+	int z = 0;
+	dian *dpp;
+	for (z = 0, dpp = t->dfirst; dpp != NULL; z++, dpp = dpp->next)
+		diannumber[z] = dpp->data;
+	node *s;
+	initstack(s);//初始化倒序存储一笔画边的栈
+	int n = 0, back = 0, allback = 0;//back退一层深度遍历函数标志，allback退出全部深度遍历函数标志
+	int b1, b2;//一笔画起点终点
+	int a1, a2, i;
+	bian *bp;
+	dian *dp;
+	int num = t->dnum;
+	int **a = new int*[num];
+	for (i = 0; i < num; ++i)
+	{
+		a[i] = new int[num];
+	}
+	a[num - 1][num - 1] = { 0 };
+	for (bp = t->bfirst; bp != NULL; bp = bp->next)
+	{
+		a1 = -1;
+		a2 = -1;
+		for (dp = t->dfirst; dp != NULL; dp = dp->next)
+		{
+			if (dp->data == bp->begin)a1 = dp->number;
+			if (dp->data == bp->end)a2 = dp->number;
+			if (a1 != -1 && a2 != -1)break;
+		}
+		a[a1][a2] = 1;
+		a[a2][a1] = 1;
+	}
+	i = 1;
+	if (t->ji == 1)
+		dfs(diannumber, a, s, n, t->ji12[0]->number, t->ji12[1]->number, t->dnum, t->bnum, back, allback, over);
+	else
+		dfs(diannumber, a, s, n, i, 1, t->dnum, t->bnum, back, allback, over);
+	for (i = 0; i < num; i++)
+	{
+		delete[] a[i];
+	}
+	delete[] a;
+	printf("                                           此图是一笔画\n");
+	printf("                                           起点：%c\n", s->end);
+	printf("                                           路径：");
+	int v = 0;
+	while (s != NULL)
+	{   
+		v++;
+		pop(s, x, y);
+		printf("%c-%c ", y, x);
+		if (v % 6 == 0)printf("\n                                                 ");
+	}
+	printf("\n                                           终点：%c\n\n", x);
+	printf("                                           -----------------------------\n");
+}
+void  print(tu *t,int tnum)
+{
+	printf("\n\n                           ------------------------检测结果如下-------------------------");
+	printf("\n\n                                                共输入了%d个图形\n\n\n", tnum);
+	int j = 1;
+	int i = 1;
+	bian *bp;
+	if (t->next == NULL)return;
+	tu *tp = t->next;
+	for (; tp != NULL; i++, tp = tp->next)
+	{
+		printf("                                           ---------第%d个图形-----------\n\n", i);
+		if (tp->yisign == 1)
+		{
+			create(tp);
+		}
+		else
+		{
+			printf("                                           此图不是一笔画\n");
+			printf("                                           此图的边：\n");
+			for (bp = tp->bfirst, j = 1; bp != NULL; bp = bp->next, j++)
+			{
+				if (j % 8 == 1)printf("                                                    ");
+				printf("%c-%c ", bp->begin, bp->end);
+				if (j % 8 == 0)printf("\n");
+			}
+			printf("\n\n                                           ---------------------------\n");
+		}
+
+	}
+}
+void input(int &anum,int &bnum,char a[],bian b[])
+{
+	int i = 0, u = 0;
+	int number;
+	printf("\n                     -------------------------欢迎使用“一笔画”检测系统----------------------------\n\n");
+	printf("                           功能：（1）此系统可以根据您所输入的图形信息来判断输入图形的个数\n");
+	printf("                                 （2）判断每个图形是否是一笔画\n");
+	printf("                                 （3）输出一笔画图形的图形信息\n\n");
+	printf("                           -----------请您按着如下提示完成图形信息的输入操作-----------      \n\n");
+	printf("                                    --------请您选择图形信息的输入方式--------\n\n");
+	printf("                                    1.调用文件\n");
+	printf("                                    2.手动输入\n");
+	printf("                                    请您输入序号：");
+	while (1)
+	{
+		scanf("%d", &number);
+		if (number != 1 && number != 2)printf("                                    请您输入1或2：");
+		else break;
+	}
+	printf("                                    ------------------------------------------\n");
+	if (number == 1)
+	{
+		char s[100];
+		FILE *fp;
+		printf("                           请您输入文件名：");
+		scanf("%s", s);
+		fp = fopen(s, "r");
+		fscanf(fp, "%d ", &anum);
+		fscanf(fp, "%d\n", &bnum);
+		for (i = 0; i < anum - 1; i++)
+			fscanf(fp, "%c ", &a[i]);
+		fscanf(fp, "%c\n", &a[i]);
+		for (i = 0; i < bnum; i++)
+		{
+			fscanf(fp, "%c ", &b[i].begin);
+			fscanf(fp, "%c\n", &b[i].end);
+			b[i].sign = 0;
+		}
+		fclose(fp);
+		printf("                           您输入点的个数：%d \n                           您输入边的个数：%d\n", anum, bnum);
+		printf("                           您以字符形式输入所有的点：\n");
+		for (i = 0, u = 1; i < anum; u++, i++)
+		{
+			if (u % 16 == 1)printf("                                 ");
+			printf("%c ", a[i]);
+			if (u % 16 == 0)printf("\n");
+		}
+		printf("\n                           您输入所有的边：\n");
+		for (i = 0, u = 1; i < bnum; u++, i++)
+		{
+			if (u % 8 == 1)printf("                                ");
+			printf(" %c-%c", b[i].begin, b[i].end);
+			if (u % 8 == 0)printf("\n");
+		}
+	}
+	//**********************************手动输入
+	else
+	{
+		printf("请您输入点的个数：");
+		scanf("%d", &anum);
+		printf("请您输入边的个数：");
+		scanf("%d", &bnum);
+		printf("请您以字符形式输入所有的点：");
+		for (i = 0, u = 1; i < anum - 1; u++, i++)
+		{
+			scanf(" %c ", &a[i]);
+		}
+		scanf("%c", &a[i]);
+		printf("请您输入所有的边：\n");
+
+		for (i = 0; i < bnum - 1; i++)
+		{
+			//printf("");
+			scanf(" %c %c\n", &b[i].begin, &b[i].end);
+			b[i].sign = 0;
+		}
+
+		scanf("%c %c", &b[i].begin, &b[i].end);
+		b[i].sign = 0;
+
+	}
+}
+void zhengli(int anum, int bnum, bian b[],tu *&t,int &tnum)
+{
+	int lol = 0;
+	int biannum = 0;
+	bian *pp;
+	int jinum;
+	int jidian = 0;//奇点个数
+	int lt = 0;//连通分支个数
+	int zhenghe = 0;
+	tu   *tp;
+	t = new tu;
+	t->next = NULL;
+	t->bfirst = NULL;
+	t->dfirst = NULL;
+	int i = 0, j, n = 0, addsign;
+	bian *bp;
+	dian *dp, *p, *p1, *p2, *p3;
+    //***********把杂乱无章的边和点整理出若干连通图**************
+	while (1)
+	{
+		tnum++;//联通图的个数
+		for (i = 0; i < bnum; i++)
+		if (b[i].sign == 0)break;//寻找新连通分支的第一个边
+		if (i == bnum)break;
+		//******************//建立新的连通分支
+		tp = new tu;
+		tp->next = t->next;
+		t->next = tp;
+		tp->bfirst = NULL;
+		tp->dfirst = NULL;
+		//*******************//录入新连通分支第一个边的首点
+		dp = new dian;
+		dp->data = b[i].begin;
+		dp->du = 1;
+		dp->next = tp->dfirst;
+		tp->dfirst = dp;
+		//******************//录入新连通分支第一个边的末点
+		dp = new dian;
+		dp->data = b[i].end;
+		dp->du = 1;
+		dp->next = tp->dfirst;
+		tp->dfirst = dp;
+		//******************//录入新连通分支的第一个边
+		bp = new bian;
+		bp->begin = b[i].begin;
+		bp->end = b[i].end;
+		bp->next = tp->bfirst;
+		tp->bfirst = bp;
+		//*****************//
+		b[i].sign = 1;//边做标记表示访问过
+		//*****************//
+		n++;//n:录入的边的总条数
+		while (1)
+		{
+			for (p = t->next->dfirst, addsign = 0; p != NULL; p = p->next)//addsign = 0;//此联通分支是否添加新的边，加入新边1，未加入
+			{
+				for (j = 0; j < bnum; j++)
+				{
+					if (b[j].sign == 0)
+					{
+						if (b[j].begin == p->data)
+						{
+							p->du++;//点的度加一
+						   //************//加边
+							bp = new bian;
+							bp->begin = b[j].begin;
+							bp->end = b[j].end;
+							bp->next = t->next->bfirst;
+							t->next->bfirst = bp;
+							//*************//加点
+							dp = new dian;
+							dp->data = b[j].end;
+							dp->du = 1;
+							dp->next = t->next->dfirst;
+							t->next->dfirst = dp;
+							//***************//
+							addsign++;//表示加过边
+							b[j].sign = 1;
+							//******************//
+							n++;
+							if (n == bnum)break;
+						}
+						if (b[j].end == p->data)
+						{
+							p->du++;//点的度加一
+							//************//加边
+							bp = new bian;
+							bp->begin = b[j].begin;
+							bp->end = b[j].end;
+							bp->next = t->next->bfirst;
+							t->next->bfirst = bp;
+							//*************//加点
+							dp = new dian;
+							dp->data = b[j].begin;
+							dp->du = 1;
+							dp->next = t->next->dfirst;
+							t->next->dfirst = dp;
+							//***************//
+							addsign++;//表示加过边
+							b[j].sign = 1;
+							//******************//
+							n++;
+							if (n == bnum)break;
+						}
+					}
+				}
+				if (n == bnum)break;
+			}
+			if (n == bnum)break;
+			if (addsign == 0)break;
+		}
+		//************************//整合连通分支中的相同的“点”，并且整合点的度；
+		for (p3 = t->next->dfirst, p1 = t->next->dfirst->next; p1 != NULL;)
+		{
+			zhenghe = 0;
+			for (p2 = t->next->dfirst; p2 != p1; p2 = p2->next)
+				if (p1->data == p2->data)
+				{
+					p2->du = p2->du + p1->du;
+					p3->next = p1->next;
+					p1 = p1->next;
+					zhenghe = 1;
+					break;
+				}
+			if (zhenghe == 0)
+			{
+				p3 = p3->next;
+				p1 = p1->next;
+			}
+		}
+		//********************//计算每个连通分支奇点个数，若有奇点并保存在ji12【】中
+		jidian = 0;
+		lol = 0;
+		for (i = 0, p = t->next->dfirst; p != NULL; p = p->next, i++)
+		{
+			p->number = i;//给联通图中每个点按序赋编号
+			if (p->du % 2 == 1)
+			{
+				if (jidian == 2) { lol = 1; t->next->yisign = 0; break; }//因为图的结构体中只有ji12[0]和ji12[1],加lol控制防止越界篡改图中边的信息
+				t->next->ji12[jidian] = p;
+				jidian++;
+			}
+		}
+		t->next->dnum = i;//连通分支的点的个数
+		if (lol == 0)//这个if使得非一笔画的边可以输出
+		{//*******************************//计算连通分支中是否可以一笔画
+			if (jidian == 0 || jidian == 2)
+			{
+				t->next->yisign = 1;
+				//********************************//计算一笔画的边条数
+				for (biannum = 0, pp = t->next->bfirst; pp != NULL; pp = pp->next)
+					biannum++;
+				t->next->bnum = biannum;
+			}
+			else t->next->yisign = 0;
+			//*********************//判断是否有奇点
+			if (jidian != 0)t->next->ji = 1;
+			else t->next->ji = 0;
+			//*********************//
+		}
+		if (n == bnum)break;
+	}
+}
+int main()
+{
+	int tnum = 0;
+	tu  *t;
+	int anum, bnum;
+	char a[1000];
+	bian b[1000];
+	input(anum, bnum, a, b);
+	zhengli(anum, bnum, b, t, tnum);
+	print(t,tnum);
+	return 0;
+}
